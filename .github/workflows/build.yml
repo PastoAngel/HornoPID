@@ -38,7 +38,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HornoPID-Android
-          path: build/app/outputs/flutter-apk/app-release.apk
+          # CORRECCIÓN: Usamos *.apk para atrapar el archivo generado
+          path: build/app/outputs/flutter-apk/*.apk
 
   # TRABAJO 2: GENERAR EXE (WINDOWS)
   build-windows:
@@ -64,6 +65,7 @@ jobs:
 
       - name: Compilar EXE
         env:
+          # Mantenemos el parche de codificación
           PYTHONIOENCODING: utf-8    
         run: |
           flet build windows --project "HornoPID" --product "Horno PID Control"
@@ -72,4 +74,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: HornoPID-Windows
-          path: build/windows/runner/Release
+          # CORRECCIÓN: Usamos ** para buscar recursivamente (incluye x64)
+          path: build/windows/**/runner/Release
