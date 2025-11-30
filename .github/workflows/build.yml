@@ -63,6 +63,8 @@ jobs:
           flutter-version: '3.19.0'
 
       - name: Compilar EXE
+        env:
+          PYTHONIOENCODING: utf-8    
         run: |
           flet build windows --project "HornoPID" --product "Horno PID Control"
 
