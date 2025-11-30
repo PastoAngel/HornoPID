@@ -1,78 +1,106 @@
-name: Compilar Flet App
+name: Compilar Flet App (Diagnóstico)
 
-# Se activa cuando subes código (push) o manualmente
 on:
   push:
     branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  # TRABAJO 1: GENERAR APK (ANDROID)
+  # -----------------------------------------------------------------
+  # TRABAJO 1: ANDROID (Con Diagnóstico de Archivos)
+  # -----------------------------------------------------------------
   build-android:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout del código
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Instalar Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Instalar Dependencias
-        run: |
-          pip install -r requirements.txt
-          # Aseguramos que flet command line esté disponible
-          pip install flet 
+      - name: Setup Java (Necesario para Android)
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-      - name: Instalar Flutter (Motor de Flet)
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.0'
-
-      - name: Compilar APK
-        run: |
-          flet build apk --project "HornoPID" --product "Horno PID Control"
-
-      - name: Subir APK a GitHub
-        uses: actions/upload-artifact@v4
-        with:
-          name: HornoPID-Android
-          # CORRECCIÓN: Usamos *.apk para atrapar el archivo generado
-          path: build/app/outputs/flutter-apk/*.apk
-
-  # TRABAJO 2: GENERAR EXE (WINDOWS)
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout del código
-        uses: actions/checkout@v4
-
-      - name: Instalar Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
 
       - name: Instalar Dependencias
         run: |
           pip install -r requirements.txt
           pip install flet
 
-      - name: Instalar Flutter
+      - name: Compilar APK (Modo Verbose)
+        # El flag -v nos dirá si falla por algo interno
+        run: |
+          flet build apk --project "HornoPID" --product "HornoControl" -v
+
+      - name: 🔍 DIAGNÓSTICO - ¿Dónde está el archivo?
+        # Este paso nos mostrará en el log todos los archivos creados
+        if: always() 
+        run: |
+          echo "Buscando archivos APK..."
+          find . -name "*.apk"
+          echo "Listando carpeta build..."
+          ls -R build || echo "La carpeta build no existe (La compilación falló totalmente)"
+
+      - name: Subir APK (Búsqueda Recursiva)
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: HornoPID-Android
+          # Buscamos el APK donde sea que haya caído
+          path: |
+            **/*.apk
+            !**/debug/**/*.apk
+
+  # -----------------------------------------------------------------
+  # TRABAJO 2: WINDOWS (Con Diagnóstico)
+  # -----------------------------------------------------------------
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.19.0'
 
-      - name: Compilar EXE
-        env:
-          # Mantenemos el parche de codificación
-          PYTHONIOENCODING: utf-8    
+      - name: Instalar Dependencias
         run: |
-          flet build windows --project "HornoPID" --product "Horno PID Control"
+          pip install -r requirements.txt
+          pip install flet
 
-      - name: Subir EXE a GitHub
+      - name: Compilar EXE (Sin espacios en nombre)
+        env:
+          PYTHONIOENCODING: utf-8
+        # Simplificamos el nombre del producto para evitar errores de espacios
+        run: |
+          flet build windows --project "HornoPID" --product "HornoControl" -v
+
+      - name: 🔍 DIAGNÓSTICO WINDOWS
+        if: always()
+        run: |
+          echo "Buscando archivos EXE..."
+          Get-ChildItem -Path build -Recurse -Filter *.exe -ErrorAction SilentlyContinue
+
+      - name: Subir EXE
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: HornoPID-Windows
-          # CORRECCIÓN: Usamos ** para buscar recursivamente (incluye x64)
-          path: build/windows/**/runner/Release
+          # Ruta más generosa para encontrarlo
+          path: build/windows/**/runner/Release/**/*j
