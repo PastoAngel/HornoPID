@@ -61,8 +61,8 @@ jobs:
           path: build/apk/*.apk
           if-no-files-found: error
 
-  # -----------------------------------------------------------------
-  # TRABAJO 2: WINDOWS (EXE)
+# -----------------------------------------------------------------
+  # TRABAJO 2: WINDOWS (EXE) - CORREGIDO
   # -----------------------------------------------------------------
   build-windows:
     name: Build Windows EXE
@@ -88,7 +88,11 @@ jobs:
           pip install flet
 
       - name: Compilar Windows EXE
-        # --no-rich-output: SOLUCIONA EL ERROR UnicodeEncodeError en Windows
+        # --- AQUÍ ESTÁ EL ARREGLO ---
+        # 1. PYTHONIOENCODING: utf-8 -> Obliga a Python a aceptar símbolos como ●
+        # 2. --no-rich-output -> Intenta evitar gráficos complejos
+        env:
+          PYTHONIOENCODING: utf-8
         run: |
           flet build windows --project "${{ env.PROJECT_NAME }}" --product "${{ env.PRODUCT_NAME }}" --verbose --no-rich-output
 
