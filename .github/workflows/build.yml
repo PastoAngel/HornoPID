@@ -1,0 +1,73 @@
+name: Compilar Flet App
+
+# Se activa cuando subes código (push) o manualmente
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  # TRABAJO 1: GENERAR APK (ANDROID)
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Instalar Dependencias
+        run: |
+          pip install -r requirements.txt
+          # Aseguramos que flet command line esté disponible
+          pip install flet 
+
+      - name: Instalar Flutter (Motor de Flet)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+
+      - name: Compilar APK
+        run: |
+          flet build apk --project "HornoPID" --product "Horno PID Control"
+
+      - name: Subir APK a GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: HornoPID-Android
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  # TRABAJO 2: GENERAR EXE (WINDOWS)
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout del código
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Instalar Dependencias
+        run: |
+          pip install -r requirements.txt
+          pip install flet
+
+      - name: Instalar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0'
+
+      - name: Compilar EXE
+        run: |
+          flet build windows --project "HornoPID" --product "Horno PID Control"
+
+      - name: Subir EXE a GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: HornoPID-Windows
+          path: build/windows/runner/Release
